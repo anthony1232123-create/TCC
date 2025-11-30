@@ -743,10 +743,12 @@ Excelデータの各項目を以下のようにマッピングしてください
     let completion;
     try {
       console.log('[DEBUG] フェーズ2: OpenAI APIを呼び出します...');
-      console.log('[DEBUG] フェーズ2: モデル=gpt-4o-mini, 入力トークン数（概算）=', phase2TotalTokens);
+      // 精度向上のため、モデルをgpt-4oに変更
+      const model = 'gpt-4o';
+      console.log(`[DEBUG] フェーズ2: モデル=${model}, 入力トークン数（概算）=${phase2TotalTokens}`);
       
       completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: phase2UserPrompt },
