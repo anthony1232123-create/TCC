@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, ReactElement } from 'react';
+import { useState, useMemo } from 'react';
+import type { ReactElement } from 'react';
 
 interface ResultDisplayProps {
   text: string;
