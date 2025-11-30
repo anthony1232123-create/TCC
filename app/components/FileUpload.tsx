@@ -2,7 +2,6 @@
 
 import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 
-// 型定義をエクスポートせず、コンポーネントの直前で定義する（シンプルな形に戻す）
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading: boolean;
@@ -20,7 +19,6 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
     let interval: NodeJS.Timeout;
     
     if (isLoading) {
-      // 外部からの進捗指定がない場合は自動で進める
       if (progressValue === undefined) {
         setInternalProgress(0);
         interval = setInterval(() => {
@@ -31,7 +29,6 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
           });
         }, 200);
       } else {
-        // 外部からの指定がある場合はそれに従う
         setInternalProgress(progressValue);
       }
     } else {
@@ -92,10 +89,48 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
     fileInputRef.current?.click();
   };
 
-  // プログレスバーの表示値を計算（最小5%を確保して確実に表示されるようにする）
   const displayProgress = Math.max(5, Math.round(internalProgress));
   const displayText = loadingText || '処理中...';
 
+  // ローディング状態の表示を完全に分離
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+          ファイルをアップロード
+        </h2>
+        
+        <div className="border-2 border-dashed border-blue-200 rounded-lg p-12 bg-gray-50 opacity-90 cursor-not-allowed">
+          <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto py-4">
+            {/* プログレスバー */}
+            <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner border border-gray-300">
+              <div 
+                className="h-full rounded-full relative transition-all duration-500 ease-out"
+                style={{ 
+                  width: `${displayProgress}%`,
+                  minWidth: '5%',
+                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'gradientMove 2s linear infinite',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                <div className="absolute top-0 left-0 w-full h-full bg-white/30 animate-pulse"></div>
+                <div className="absolute top-0 right-0 h-full w-3 bg-white/60 blur-[3px]"></div>
+              </div>
+            </div>
+            
+            <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+              {displayText} {displayProgress}%
+            </p>
+            <p className="text-sm text-gray-500 mt-2">AIが内容を解析して原稿を作成しています...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 通常状態の表示
   return (
     <div className="w-full">
       <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
@@ -110,7 +145,6 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-300 hover:border-gray-400 bg-gray-50'
           }
-          ${isLoading ? 'opacity-90 cursor-not-allowed border-blue-200' : ''}
         `}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -124,62 +158,29 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
           accept=".xlsx,.xls"
           onChange={handleFileSelect}
           className="hidden"
-          disabled={isLoading}
         />
         
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto py-4">
-            {/* プログレスバー - より目立つように高さと色を調整 */}
-            <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner border border-gray-300">
-              <div 
-                className="h-full rounded-full relative transition-all duration-500 ease-out"
-                style={{ 
-                  width: `${displayProgress}%`,
-                  minWidth: '5%', // 最小幅を確保
-                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'gradientMove 2s linear infinite',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              >
-                {/* キラキラエフェクト */}
-                <div className="absolute top-0 left-0 w-full h-full bg-white/30 animate-pulse"></div>
-                <div className="absolute top-0 right-0 h-full w-3 bg-white/60 blur-[3px]"></div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-3">
-              <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-                {displayText} {displayProgress}%
-              </p>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">AIが内容を解析して原稿を作成しています...</p>
-          </div>
-        ) : (
-          <>
-            <svg
-              className="mx-auto h-16 w-16 text-gray-400 mb-4 transition-transform group-hover:scale-110 duration-300"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
-            >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-base text-gray-700 mb-2">
-              <span className="font-semibold text-blue-600">クリック</span>または
-              <span className="font-semibold text-blue-600">ドラッグ＆ドロップ</span>
-              でExcelファイルをアップロード
-            </p>
-            <p className="text-sm text-gray-500">
-              対応形式: .xlsx, .xls
-            </p>
-          </>
-        )}
+        <svg
+          className="mx-auto h-16 w-16 text-gray-400 mb-4 transition-transform group-hover:scale-110 duration-300"
+          stroke="currentColor"
+          fill="none"
+          viewBox="0 0 48 48"
+        >
+          <path
+            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <p className="text-base text-gray-700 mb-2">
+          <span className="font-semibold text-blue-600">クリック</span>または
+          <span className="font-semibold text-blue-600">ドラッグ＆ドロップ</span>
+          でExcelファイルをアップロード
+        </p>
+        <p className="text-sm text-gray-500">
+          対応形式: .xlsx, .xls
+        </p>
       </div>
     </div>
   );
