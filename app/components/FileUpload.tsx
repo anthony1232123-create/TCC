@@ -92,7 +92,8 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
     fileInputRef.current?.click();
   };
 
-  const displayProgress = Math.round(internalProgress);
+  // プログレスバーの表示値を計算（最小5%を確保して確実に表示されるようにする）
+  const displayProgress = Math.max(5, Math.round(internalProgress));
   const displayText = loadingText || '処理中...';
 
   return (
@@ -128,25 +129,27 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
         
         {isLoading ? (
           <div className="flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto py-4">
-            {/* おしゃれなプログレスバー (Canva風) */}
-            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner">
+            {/* プログレスバー - より目立つように高さと色を調整 */}
+            <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner border border-gray-300">
               <div 
-                className="h-full rounded-full relative transition-all duration-500 ease-out animate-gradient-move"
+                className="h-full rounded-full relative transition-all duration-500 ease-out"
                 style={{ 
                   width: `${displayProgress}%`,
+                  minWidth: '5%', // 最小幅を確保
                   background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
-                  backgroundSize: '200% 100%'
+                  backgroundSize: '200% 100%',
+                  animation: 'gradientMove 2s linear infinite',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               >
                 {/* キラキラエフェクト */}
                 <div className="absolute top-0 left-0 w-full h-full bg-white/30 animate-pulse"></div>
-                <div className="absolute top-0 right-0 h-full w-2 bg-white/50 blur-[2px]"></div>
+                <div className="absolute top-0 right-0 h-full w-3 bg-white/60 blur-[3px]"></div>
               </div>
             </div>
             
             <div className="flex items-center justify-center gap-3">
-              {/* スピナーは削除し、プログレスバーのみにする */}
-              <p className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 animate-pulse">
+              <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
                 {displayText} {displayProgress}%
               </p>
             </div>
