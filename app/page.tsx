@@ -308,7 +308,7 @@ export default function Home() {
           </div>
         </header>
 
-        {/* 履歴セクション（上部に移動、最新5件のみ表示） */}
+        {/* 履歴セクション（上部に移動、最新4件のみ表示） */}
         {history.length > 0 && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
@@ -326,7 +326,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {history.slice(0, 5).map((item) => (
+              {history.slice(0, 4).map((item) => (
                 <div 
                   key={item.id}
                   onClick={() => loadHistoryItem(item)}
@@ -361,6 +361,7 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           {/* @ts-ignore: Vercel build environment type resolution issue - FileUpload props are correctly defined */}
           <FileUpload
+            key={`file-upload-v1.2.2-${isLoading}`}
             onFileUpload={handleFileUpload}
             isLoading={isLoading}
             {...({ loadingText, progressValue } as any)}
@@ -412,7 +413,7 @@ export default function Home() {
         )}
 
         <div className="text-center text-gray-300 text-xs py-4">
-          v1.2.1
+          v1.2.2
         </div>
 
       </div>
