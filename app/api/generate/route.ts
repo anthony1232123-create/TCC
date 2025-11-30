@@ -504,7 +504,7 @@ ${excelDataString}
           { role: 'system', content: phase1SystemPrompt },
           { role: 'user', content: phase1UserPrompt },
         ],
-        temperature: 0.2, // 正確な変換のため低めに設定
+        // gpt-5-miniはtemperatureパラメータをサポートしていないため削除
       });
       
       console.log('[DEBUG] フェーズ1: API呼び出し成功！使用トークン数:', phase1Completion.usage?.total_tokens || '不明');
@@ -753,7 +753,7 @@ Excelデータの各項目を以下のようにマッピングしてください
           { role: 'system', content: systemPrompt },
           { role: 'user', content: phase2UserPrompt },
         ],
-        temperature: 0.3, // より正確なマッピングのため温度を下げる
+        // gpt-5-miniはtemperatureパラメータをサポートしていないため削除
       });
       
       console.log('[DEBUG] フェーズ2: API呼び出し成功！使用トークン数:', completion.usage?.total_tokens || '不明');
