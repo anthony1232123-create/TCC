@@ -89,7 +89,9 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
     fileInputRef.current?.click();
   };
 
-  const displayProgress = Math.max(5, Math.round(internalProgress));
+  // progressValueが親から渡されている場合はそれを優先、なければinternalProgressを使用
+  const finalProgress = progressValue !== undefined ? progressValue : internalProgress;
+  const displayProgress = Math.max(5, Math.min(100, Math.round(finalProgress)));
   const displayText = loadingText || '処理中...';
 
   // ローディング状態の表示を完全に分離
@@ -101,29 +103,29 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
         </h2>
         
         <div className="border-2 border-dashed border-blue-200 rounded-lg p-12 bg-gray-50 opacity-90 cursor-not-allowed">
-          <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto py-4">
-            {/* プログレスバー */}
-            <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner border border-gray-300">
+          <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto py-4 space-y-4">
+            {/* プログレスバー - より目立つデザインに */}
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden relative shadow-inner">
               <div 
-                className="h-full rounded-full relative transition-all duration-500 ease-out"
-                style={{ 
-                  width: `${displayProgress}%`,
-                  minWidth: '5%',
-                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'gradientMove 2s linear infinite',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
+                className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                style={{ width: `${displayProgress}%` }}
               >
-                <div className="absolute top-0 left-0 w-full h-full bg-white/30 animate-pulse"></div>
-                <div className="absolute top-0 right-0 h-full w-3 bg-white/60 blur-[3px]"></div>
+                {/* キラッと光るエフェクト */}
+                <div className="w-full h-full bg-white/30 animate-pulse"></div>
               </div>
             </div>
             
-            <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-              {displayText} {displayProgress}%
-            </p>
-            <p className="text-sm text-gray-500 mt-2">AIが内容を解析して原稿を作成しています...</p>
+            <div className="space-y-2 text-center">
+              <p className="text-lg font-semibold text-gray-700 animate-pulse">
+                {displayText}
+              </p>
+              <p className="text-2xl font-bold text-blue-600">
+                {displayProgress}%
+              </p>
+              <p className="text-xs text-gray-400">
+                AIが内容を解析して原稿を執筆中...
+              </p>
+            </div>
           </div>
         </div>
       </div>
