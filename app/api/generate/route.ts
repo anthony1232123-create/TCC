@@ -496,10 +496,10 @@ ${excelDataString}
     let structuredText = '';
     try {
       console.log('[DEBUG] フェーズ1: OpenAI APIを呼び出します...');
-      console.log('[DEBUG] フェーズ1: モデル=gpt-4o-mini, 入力トークン数（概算）=', phase1EstimatedTokens);
+      console.log('[DEBUG] フェーズ1: モデル=gpt-5-mini, 入力トークン数（概算）=', phase1EstimatedTokens);
       
       const phase1Completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: phase1SystemPrompt },
           { role: 'user', content: phase1UserPrompt },
@@ -743,8 +743,8 @@ Excelデータの各項目を以下のようにマッピングしてください
     let completion;
     try {
       console.log('[DEBUG] フェーズ2: OpenAI APIを呼び出します...');
-      // 精度向上のため、モデルをgpt-4oに変更
-      const model = 'gpt-4o';
+      // モデルをgpt-5-miniに変更
+      const model = 'gpt-5-mini';
       console.log(`[DEBUG] フェーズ2: モデル=${model}, 入力トークン数（概算）=${phase2TotalTokens}`);
       
       completion = await openai.chat.completions.create({
