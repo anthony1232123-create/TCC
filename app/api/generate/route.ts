@@ -3,7 +3,6 @@ import OpenAI from 'openai';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
-import { PDFParse } from 'pdf-parse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -557,11 +556,20 @@ async function executePhase2(openai: OpenAI, structuredText: string) {
     let mediaPolicyText = '';
     try {
       const pdfPath = path.join(process.cwd(), '媒体ポリシーまとめ 202408.pdf');
-      const pdfBuffer = fs.readFileSync(pdfPath);
-      const pdfParser = new PDFParse({ data: pdfBuffer, verbosity: 0 });
-      const pdfData = await pdfParser.getText();
-      mediaPolicyText = pdfData.text;
-      console.log('[DEBUG] PDF読み込み成功: ページ数:', pdfData.total);
+      // ファイルが存在するか確認
+      if (fs.existsSync(pdfPath)) {
+        const pdfBuffer = fs.readFileSync(pdfPath);
+        // pdf-parseはCommonJSモジュールなので動的インポートを使用
+        const pdfParseModule = await import('pdf-parse');
+        // pdf-parseは名前付きエクスポートまたはデフォルトエクスポートの可能性がある
+        const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+        const pdfData = await pdfParse(pdfBuffer);
+        mediaPolicyText = pdfData.text;
+        console.log('[DEBUG] PDF読み込み成功: ページ数:', pdfData.numpages);
+      } else {
+        console.warn('[WARNING] PDFファイルが見つかりません:', pdfPath);
+        mediaPolicyText = '媒体ポリシーファイルが見つかりませんでしたが、一般的な求人原稿作成のベストプラクティスに従って作成してください。';
+      }
     } catch (pdfError: any) {
       console.warn('[WARNING] PDF読み込みエラー:', pdfError);
       // PDFが読み込めなくても処理を続行（デフォルトのメッセージを使用）
