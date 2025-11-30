@@ -16,11 +16,18 @@ export default function Home() {
   const [generatedText, setGeneratedText] = useState<string>('');
   const [structuredText, setStructuredText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isPhase2Loading, setIsPhase2Loading] = useState<boolean>(false);
+  // isPhase2LoadingはisLoadingに統合されたため削除（ただしフェーズ2のAPI呼び出し中は使用される）
   const [error, setError] = useState<string>('');
   const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: 未開始, 1: フェーズ1完了, 2: フェーズ2完了
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string>('');
+  
+  // プログレスバー用の状態
+  const [loadingText, setLoadingText] = useState<string>('');
+  const [progressValue, setProgressValue] = useState<number>(0);
+  
+  // デバッグモード（開発者用）
+  const [isDebugMode, setIsDebugMode] = useState<boolean>(false);
 
   // 履歴の読み込み
   useEffect(() => {
@@ -69,71 +76,16 @@ export default function Home() {
 
   const loadHistoryItem = (item: HistoryItem) => {
     setGeneratedText(item.generatedText);
-    setStructuredText(''); // 履歴からの読み込みなのでフェーズ1のテキストはクリアしておく
+    setStructuredText(''); 
     setCurrentPhase(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleFileUpload = useCallback(async (file: File) => {
-    setIsLoading(true);
-    setError('');
-    setGeneratedText('');
-    setStructuredText('');
-    setCurrentPhase(0);
-    setCurrentFileName(file.name);
-
+  // フェーズ2の実行（分離）
+  const executePhase2 = async (textData: string, fileName: string) => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/generate?phase=1', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        throw new Error('サーバーからの応答が空です');
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('[ERROR] JSONパースエラー:', parseError);
-        console.error('[ERROR] レスポンステキスト:', responseText);
-        throw new Error(`サーバーからの応答を解析できませんでした: ${responseText.substring(0, 200)}`);
-      }
-
-      console.log('[DEBUG] フェーズ1 APIレスポンス:', data);
-
-      if (!response.ok) {
-        console.error('[ERROR] APIエラー:', data);
-        throw new Error(data.error || 'エラーが発生しました');
-      }
-
-      setStructuredText(data.structuredText || '');
-      setCurrentPhase(1);
-    } catch (err: any) {
-      setError(err.message || 'フェーズ1（テキスト化）に失敗しました');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const handlePhase2 = useCallback(async () => {
-    if (!structuredText) {
-      setError('テキスト化されたデータがありません');
-      return;
-    }
-
-    setIsPhase2Loading(true);
-    setError('');
-    setGeneratedText('');
-
-    try {
-      const formData = new FormData();
-      formData.append('structuredText', structuredText);
+      formData.append('structuredText', textData);
 
       const response = await fetch('/api/generate?phase=2', {
         method: 'POST',
@@ -154,27 +106,128 @@ export default function Home() {
         throw new Error(`サーバーからの応答を解析できませんでした: ${responseText.substring(0, 200)}`);
       }
 
-      console.log('[DEBUG] フェーズ2 APIレスポンス:', data);
+      if (!response.ok) {
+        throw new Error(data.error || 'エラーが発生しました');
+      }
+
+      setGeneratedText(data.generatedText);
+      setCurrentPhase(2);
+      saveToHistory(data.generatedText, data.jsonData, fileName);
+      
+      // 完了
+      setProgressValue(100);
+      setTimeout(() => setIsLoading(false), 500);
+      
+    } catch (err: any) {
+      setError(err.message || 'フェーズ2（マッピング）に失敗しました');
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    setIsLoading(true);
+    setError('');
+    setGeneratedText('');
+    setStructuredText('');
+    setCurrentPhase(0);
+    setCurrentFileName(file.name);
+    
+    // プログレスバー初期化
+    setLoadingText('シートを解析しています...');
+    setProgressValue(0);
+
+    // 擬似的に進捗を進める（0-50%まで）
+    const progressInterval = setInterval(() => {
+      setProgressValue(prev => {
+        if (prev >= 45) return 45; // 45%で止めてAPI応答を待つ
+        return prev + 2; // 少し早めに進める
+      });
+    }, 200);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/generate?phase=1', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setProgressValue(50); // フェーズ1完了で50%
+
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('サーバーからの応答が空です');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[ERROR] JSONパースエラー:', parseError);
+        console.error('[ERROR] レスポンステキスト:', responseText);
+        throw new Error(`サーバーからの応答を解析できませんでした: ${responseText.substring(0, 200)}`);
+      }
 
       if (!response.ok) {
         console.error('[ERROR] APIエラー:', data);
         throw new Error(data.error || 'エラーが発生しました');
       }
 
-      if (data.jsonData) {
-        console.log('[DEBUG] JSONデータ:', data.jsonData);
-        console.log('[DEBUG] JSONデータのキー数:', Object.keys(data.jsonData).length);
-      }
+      setStructuredText(data.structuredText || '');
+      setCurrentPhase(1);
 
-      setGeneratedText(data.generatedText);
-      setCurrentPhase(2);
-      saveToHistory(data.generatedText, data.jsonData, currentFileName);
+      // デバッグモードでなければ、自動的にフェーズ2へ進む
+      if (!isDebugMode) {
+        setLoadingText('原稿を執筆しています...');
+        
+        // 擬似的に進捗を進める（50-90%まで）
+        const phase2Interval = setInterval(() => {
+          setProgressValue(prev => {
+            if (prev >= 90) return 90; // 90%で止めてAPI応答を待つ
+            return prev + 1;
+          });
+        }, 300);
+        
+        // フェーズ2実行
+        await executePhase2(data.structuredText, file.name);
+        clearInterval(phase2Interval);
+      } else {
+        // デバッグモードの場合はここで停止
+        setIsLoading(false);
+      }
+      
     } catch (err: any) {
-      setError(err.message || 'フェーズ2（マッピング）に失敗しました');
-    } finally {
-      setIsPhase2Loading(false);
+      clearInterval(progressInterval);
+      setError(err.message || 'フェーズ1（テキスト化）に失敗しました');
+      setIsLoading(false);
     }
-  }, [structuredText, currentFileName, history]);
+  }, [isDebugMode]);
+
+  // 手動でフェーズ2を実行する場合（デバッグモード用）
+  const handleManualPhase2 = useCallback(async () => {
+    if (!structuredText) {
+      setError('テキスト化されたデータがありません');
+      return;
+    }
+    
+    setIsLoading(true);
+    setLoadingText('原稿を執筆しています...');
+    setProgressValue(50);
+    
+    // 擬似的に進捗を進める
+    const interval = setInterval(() => {
+      setProgressValue(prev => {
+        if (prev >= 90) return 90;
+        return prev + 1;
+      });
+    }, 300);
+    
+    await executePhase2(structuredText, currentFileName);
+    clearInterval(interval);
+    
+  }, [structuredText, currentFileName]);
 
   return (
     <div className="min-h-screen bg-white py-8 px-4">
@@ -202,6 +255,20 @@ export default function Home() {
           <p className="text-gray-600 mb-4">
             ヒアリングシート（Excel）をアップロードして、求人サイト用の原稿を自動生成
           </p>
+          
+          {/* デバッグモード切り替え（隠し機能的な位置づけ） */}
+          <div className="flex justify-center mb-4">
+            <label className="flex items-center cursor-pointer text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={isDebugMode} 
+                onChange={(e) => setIsDebugMode(e.target.checked)}
+                className="mr-2"
+              />
+              開発者モード（中間データを確認）
+            </label>
+          </div>
+
           <div className="bg-gradient-to-r from-yellow-50 to-amber-50/50 border-l-4 border-yellow-400 p-4 max-w-3xl mx-auto text-left rounded-r-lg shadow-sm backdrop-blur-sm">
             <div className="flex items-start gap-2">
               <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,6 +328,8 @@ export default function Home() {
           <FileUpload
             onFileUpload={handleFileUpload}
             isLoading={isLoading}
+            loadingText={loadingText}
+            progressValue={progressValue}
           />
         </div>
 
@@ -278,8 +347,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* フェーズ1の結果表示 */}
-        {currentPhase >= 1 && structuredText && (
+        {/* フェーズ1の結果表示（デバッグモード時のみ表示、またはフェーズ1完了後自動遷移待ちの間に表示） */}
+        {isDebugMode && currentPhase >= 1 && structuredText && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">1</span>
@@ -290,40 +359,12 @@ export default function Home() {
                 {structuredText}
               </pre>
             </div>
-            {currentPhase === 1 && (
+            {currentPhase === 1 && !isLoading && (
               <button
-                onClick={handlePhase2}
-                disabled={isPhase2Loading}
-                className={`
-                  mt-6 px-6 py-3 rounded-lg font-medium text-white
-                  transition-all duration-200
-                  relative overflow-hidden group
-                  ${isPhase2Loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg active:scale-98'
-                  }
-                `}
+                onClick={handleManualPhase2}
+                className="mt-6 px-6 py-3 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all"
               >
-                {isPhase2Loading ? (
-                  <span className="flex items-center gap-2 relative z-10">
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>マッピング中...</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-                  </span>
-                ) : (
-                  <>
-                    <span className="relative z-10 flex items-center gap-2">
-                      <span>求人原稿に変換する</span>
-                      <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </span>
-                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
-                  </>
-                )}
+                求人原稿に変換する（フェーズ2へ）
               </button>
             )}
           </div>

@@ -5,36 +5,42 @@ import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading: boolean;
+  loadingText?: string;
+  progressValue?: number;
 }
 
-export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps) {
+export default function FileUpload({ onFileUpload, isLoading, loadingText, progressValue }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [internalProgress, setInternalProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // プログレスバーのアニメーション
+  // プログレスバーのアニメーション制御
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (isLoading) {
-      setProgress(0);
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          // 95%までゆっくり進む（完了はisLoadingがfalseになったとき）
-          if (prev >= 95) return 95;
-          // 最初は速く、だんだん遅くなるような動き
-          const increment = Math.max(0.5, (95 - prev) / 20);
-          return Math.min(95, prev + increment);
-        });
-      }, 200);
+      // 外部からの進捗指定がない場合は自動で進める
+      if (progressValue === undefined) {
+        setInternalProgress(0);
+        interval = setInterval(() => {
+          setInternalProgress((prev) => {
+            if (prev >= 95) return 95;
+            const increment = Math.max(0.5, (95 - prev) / 20);
+            return Math.min(95, prev + increment);
+          });
+        }, 200);
+      } else {
+        // 外部からの指定がある場合はそれに従う
+        setInternalProgress(progressValue);
+      }
     } else {
-      setProgress(0);
+      setInternalProgress(0);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isLoading]);
+  }, [isLoading, progressValue]);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -85,6 +91,9 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
     fileInputRef.current?.click();
   };
 
+  const displayProgress = Math.round(internalProgress);
+  const displayText = loadingText || '処理中...';
+
   return (
     <div className="w-full">
       <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
@@ -117,13 +126,13 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
         />
         
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto">
+          <div className="flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto py-4">
             {/* おしゃれなプログレスバー (Canva風) */}
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner">
+            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner">
               <div 
-                className="h-full rounded-full relative transition-all duration-300 ease-out"
+                className="h-full rounded-full relative transition-all duration-500 ease-out"
                 style={{ 
-                  width: `${progress}%`,
+                  width: `${displayProgress}%`,
                   background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
                   backgroundSize: '200% 100%',
                   animation: 'gradientMove 2s linear infinite'
@@ -135,13 +144,13 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
-              <p className="text-gray-700 font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 animate-pulse">
-                まずはファイルをテキスト化しています... {Math.round(progress)}%
+            <div className="flex items-center justify-center gap-3">
+              {/* スピナーは削除し、プログレスバーのみにする */}
+              <p className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 animate-pulse">
+                {displayText} {displayProgress}%
               </p>
             </div>
-            <p className="text-xs text-gray-500 mt-2">しばらくお待ちください</p>
+            <p className="text-sm text-gray-500 mt-2">AIが内容を解析して原稿を作成しています...</p>
             
             <style jsx>{`
               @keyframes gradientMove {
