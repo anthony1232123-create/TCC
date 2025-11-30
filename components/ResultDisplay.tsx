@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, ReactElement } from 'react';
 
 interface ResultDisplayProps {
   text: string;
@@ -29,7 +29,7 @@ export default function ResultDisplay({ text }: ResultDisplayProps) {
     const lines = text.split('\n');
     
     return lines.map((line, lineIndex) => {
-      const parts: (string | JSX.Element)[] = [];
+      const parts: (string | ReactElement)[] = [];
       let lastIndex = 0;
       let match;
       
