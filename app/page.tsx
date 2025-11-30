@@ -412,7 +412,7 @@ export default function Home() {
         )}
 
         <div className="text-center text-gray-300 text-xs py-4">
-          v1.1.1
+          v1.2.0 - プログレスバー実装版
         </div>
 
       </div>
