@@ -377,6 +377,10 @@ export default function Home() {
           </div>
         )}
 
+        <div className="text-center text-gray-300 text-xs py-4">
+          v1.1.0
+        </div>
+
       </div>
     </div>
   );
