@@ -17,7 +17,6 @@ export default function Home() {
   const [generatedText, setGeneratedText] = useState<string>('');
   const [structuredText, setStructuredText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  // isPhase2LoadingはisLoadingに統合されたため削除（ただしフェーズ2のAPI呼び出し中は使用される）
   const [error, setError] = useState<string>('');
   const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: 未開始, 1: フェーズ1完了, 2: フェーズ2完了
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -35,9 +34,16 @@ export default function Home() {
     const savedHistory = localStorage.getItem('jobPostingHistory');
     if (savedHistory) {
       try {
-        setHistory(JSON.parse(savedHistory));
+        const parsed = JSON.parse(savedHistory);
+        // 配列であることを確認
+        if (Array.isArray(parsed)) {
+          setHistory(parsed);
+        } else {
+          setHistory([]);
+        }
       } catch (e) {
         console.error('Failed to parse history', e);
+        setHistory([]);
       }
     }
     
@@ -75,17 +81,22 @@ export default function Home() {
       title: title
     };
 
-    const newHistory = [newItem, ...history];
-    setHistory(newHistory);
-    localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+    // 関数型更新を使って最新のstateに基づいて更新する
+    setHistory(prevHistory => {
+      const newHistory = [newItem, ...prevHistory];
+      localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+      return newHistory;
+    });
   };
 
   const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('この履歴を削除してもよろしいですか？')) {
-      const newHistory = history.filter(item => item.id !== id);
-      setHistory(newHistory);
-      localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+      setHistory(prevHistory => {
+        const newHistory = prevHistory.filter(item => item.id !== id);
+        localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+        return newHistory;
+      });
     }
   };
 
@@ -401,7 +412,7 @@ export default function Home() {
         )}
 
         <div className="text-center text-gray-300 text-xs py-4">
-          v1.1.0
+          v1.1.1
         </div>
 
       </div>
