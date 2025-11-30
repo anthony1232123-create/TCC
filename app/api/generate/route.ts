@@ -562,9 +562,10 @@ async function executePhase2(openai: OpenAI, structuredText: string) {
       const pdfData = await pdfParser.getText();
       mediaPolicyText = pdfData.text;
       console.log('[DEBUG] PDF読み込み成功: ページ数:', pdfData.total);
-    } catch (pdfError) {
+    } catch (pdfError: any) {
       console.warn('[WARNING] PDF読み込みエラー:', pdfError);
-      // PDFが読み込めなくても処理を続行
+      // PDFが読み込めなくても処理を続行（デフォルトのメッセージを使用）
+      mediaPolicyText = '媒体ポリシーファイルが見つかりませんでしたが、一般的な求人原稿作成のベストプラクティスに従って作成してください。';
     }
 
     // システムプロンプトとユーザープロンプトの準備（フェーズ2用）

@@ -28,7 +28,20 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await response.json();
+      // レスポンスが空でないか確認
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('サーバーからの応答が空です');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[ERROR] JSONパースエラー:', parseError);
+        console.error('[ERROR] レスポンステキスト:', responseText);
+        throw new Error(`サーバーからの応答を解析できませんでした: ${responseText.substring(0, 200)}`);
+      }
 
       console.log('[DEBUG] フェーズ1 APIレスポンス:', data);
 
@@ -66,7 +79,20 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await response.json();
+      // レスポンスが空でないか確認
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('サーバーからの応答が空です');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[ERROR] JSONパースエラー:', parseError);
+        console.error('[ERROR] レスポンステキスト:', responseText);
+        throw new Error(`サーバーからの応答を解析できませんでした: ${responseText.substring(0, 200)}`);
+      }
 
       console.log('[DEBUG] フェーズ2 APIレスポンス:', data);
 
