@@ -2,7 +2,7 @@
 
 import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 
-interface FileUploadProps {
+export interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading: boolean;
   loadingText?: string;
