@@ -552,29 +552,8 @@ ${excelDataString}
 // フェーズ2を実行する関数
 async function executePhase2(openai: OpenAI, structuredText: string) {
   try {
-    // PDFファイルを読み込む
-    let mediaPolicyText = '';
-    try {
-      const pdfPath = path.join(process.cwd(), '媒体ポリシーまとめ 202408.pdf');
-      // ファイルが存在するか確認
-      if (fs.existsSync(pdfPath)) {
-        const pdfBuffer = fs.readFileSync(pdfPath);
-        // pdf-parseはCommonJSモジュールなので動的インポートを使用
-        const pdfParseModule = await import('pdf-parse');
-        // pdf-parseは名前付きエクスポートまたはデフォルトエクスポートの可能性がある
-        const pdfParse = (pdfParseModule as any).default || pdfParseModule;
-        const pdfData = await pdfParse(pdfBuffer);
-        mediaPolicyText = pdfData.text;
-        console.log('[DEBUG] PDF読み込み成功: ページ数:', pdfData.numpages);
-      } else {
-        console.warn('[WARNING] PDFファイルが見つかりません:', pdfPath);
-        mediaPolicyText = '媒体ポリシーファイルが見つかりませんでしたが、一般的な求人原稿作成のベストプラクティスに従って作成してください。';
-      }
-    } catch (pdfError: any) {
-      console.warn('[WARNING] PDF読み込みエラー:', pdfError);
-      // PDFが読み込めなくても処理を続行（デフォルトのメッセージを使用）
-      mediaPolicyText = '媒体ポリシーファイルが見つかりませんでしたが、一般的な求人原稿作成のベストプラクティスに従って作成してください。';
-    }
+    // PDFファイルの読み込みをスキップ（Vercelではファイルシステムアクセスが制限されるため）
+    const mediaPolicyText = '一般的な求人原稿作成のベストプラクティスに従って、魅力的で効果的な求人原稿を作成してください。';
 
     // システムプロンプトとユーザープロンプトの準備（フェーズ2用）
     const systemPrompt = `あなたは求人情報を整理し、魅力的な求人原稿を作成する専門家です。テキスト化された求人情報から情報を抽出し、以下の指定された項目にマッピングしてください。
