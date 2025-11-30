@@ -94,7 +94,7 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
         {isLoading ? (
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-700 font-medium">テキスト化中...</p>
+            <p className="text-gray-700 font-medium">まずはファイルをテキスト化しています...</p>
             <p className="text-sm text-gray-500 mt-1">しばらくお待ちください</p>
           </div>
         ) : (

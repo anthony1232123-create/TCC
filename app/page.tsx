@@ -1,8 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import FileUpload from '@/components/FileUpload';
 import ResultDisplay from '@/components/ResultDisplay';
+
+interface HistoryItem {
+  id: string;
+  timestamp: number;
+  fileName: string;
+  generatedText: string;
+  title: string;
+}
 
 export default function Home() {
   const [generatedText, setGeneratedText] = useState<string>('');
@@ -11,6 +19,60 @@ export default function Home() {
   const [isPhase2Loading, setIsPhase2Loading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [currentPhase, setCurrentPhase] = useState<number>(0); // 0: 未開始, 1: フェーズ1完了, 2: フェーズ2完了
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [currentFileName, setCurrentFileName] = useState<string>('');
+
+  // 履歴の読み込み
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('jobPostingHistory');
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Failed to parse history', e);
+      }
+    }
+  }, []);
+
+  const saveToHistory = (text: string, jsonData: any, fileName: string) => {
+    let title = '無題の求人原稿';
+    if (jsonData && jsonData['タイトル'] && jsonData['タイトル'] !== '（未入力）') {
+      title = jsonData['タイトル'];
+    } else {
+      const match = text.match(/【タイトル】\s*(.*)/);
+      if (match && match[1] && match[1].trim() !== '（未入力）') {
+        title = match[1].trim();
+      }
+    }
+
+    const newItem: HistoryItem = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      fileName: fileName || 'unknown.xlsx',
+      generatedText: text,
+      title: title
+    };
+
+    const newHistory = [newItem, ...history];
+    setHistory(newHistory);
+    localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+  };
+
+  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('この履歴を削除してもよろしいですか？')) {
+      const newHistory = history.filter(item => item.id !== id);
+      setHistory(newHistory);
+      localStorage.setItem('jobPostingHistory', JSON.stringify(newHistory));
+    }
+  };
+
+  const loadHistoryItem = (item: HistoryItem) => {
+    setGeneratedText(item.generatedText);
+    setStructuredText(''); // 履歴からの読み込みなのでフェーズ1のテキストはクリアしておく
+    setCurrentPhase(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleFileUpload = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -18,6 +80,7 @@ export default function Home() {
     setGeneratedText('');
     setStructuredText('');
     setCurrentPhase(0);
+    setCurrentFileName(file.name);
 
     try {
       const formData = new FormData();
@@ -28,7 +91,6 @@ export default function Home() {
         body: formData,
       });
 
-      // レスポンスが空でないか確認
       const responseText = await response.text();
       if (!responseText || responseText.trim() === '') {
         throw new Error('サーバーからの応答が空です');
@@ -50,7 +112,6 @@ export default function Home() {
         throw new Error(data.error || 'エラーが発生しました');
       }
 
-      // フェーズ1の結果を保存
       setStructuredText(data.structuredText || '');
       setCurrentPhase(1);
     } catch (err: any) {
@@ -79,7 +140,6 @@ export default function Home() {
         body: formData,
       });
 
-      // レスポンスが空でないか確認
       const responseText = await response.text();
       if (!responseText || responseText.trim() === '') {
         throw new Error('サーバーからの応答が空です');
@@ -101,7 +161,6 @@ export default function Home() {
         throw new Error(data.error || 'エラーが発生しました');
       }
 
-      // JSONデータも確認
       if (data.jsonData) {
         console.log('[DEBUG] JSONデータ:', data.jsonData);
         console.log('[DEBUG] JSONデータのキー数:', Object.keys(data.jsonData).length);
@@ -109,12 +168,13 @@ export default function Home() {
 
       setGeneratedText(data.generatedText);
       setCurrentPhase(2);
+      saveToHistory(data.generatedText, data.jsonData, currentFileName);
     } catch (err: any) {
       setError(err.message || 'フェーズ2（マッピング）に失敗しました');
     } finally {
       setIsPhase2Loading(false);
     }
-  }, [structuredText]);
+  }, [structuredText, currentFileName, history]);
 
   return (
     <div className="min-h-screen bg-white py-8 px-4">
@@ -126,7 +186,6 @@ export default function Home() {
               alt="ヴェルサス" 
               className="h-12 object-contain"
               onError={(e) => {
-                // フォールバック: 元のロゴを使用
                 (e.target as HTMLImageElement).src = '/images/tcc-logo.png';
               }}
             />
@@ -215,7 +274,7 @@ export default function Home() {
                 ) : (
                   <>
                     <span className="relative z-10 flex items-center gap-2">
-                      <span>続けてマッピングを実行</span>
+                      <span>求人原稿に変換する</span>
                       <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
@@ -230,8 +289,50 @@ export default function Home() {
 
         {/* フェーズ2の結果表示 */}
         {currentPhase === 2 && generatedText && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <ResultDisplay text={generatedText} />
+          </div>
+        )}
+
+        {/* 履歴セクション */}
+        {history.length > 0 && (
+          <div className="border-t border-gray-200 pt-8 mt-12">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              作成履歴
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {history.map((item) => (
+                <div 
+                  key={item.id}
+                  onClick={() => loadHistoryItem(item)}
+                  className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow group relative"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-800 line-clamp-1 pr-6" title={item.title}>
+                      {item.title}
+                    </h3>
+                    <button
+                      onClick={(e) => deleteHistoryItem(item.id, e)}
+                      className="text-gray-400 hover:text-red-500 p-1 absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="削除"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">
+                    ファイル: {item.fileName}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(item.timestamp).toLocaleString('ja-JP')}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
