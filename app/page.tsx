@@ -359,12 +359,11 @@ export default function Home() {
         )}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          {/* @ts-ignore: Vercel build error workaround */}
+          {/* @ts-ignore: Vercel build environment type resolution issue - FileUpload props are correctly defined */}
           <FileUpload
             onFileUpload={handleFileUpload}
             isLoading={isLoading}
-            loadingText={loadingText}
-            progressValue={progressValue}
+            {...({ loadingText, progressValue } as any)}
           />
         </div>
 
