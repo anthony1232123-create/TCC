@@ -131,12 +131,11 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
             {/* おしゃれなプログレスバー (Canva風) */}
             <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner">
               <div 
-                className="h-full rounded-full relative transition-all duration-500 ease-out"
+                className="h-full rounded-full relative transition-all duration-500 ease-out animate-gradient-move"
                 style={{ 
                   width: `${displayProgress}%`,
                   background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'gradientMove 2s linear infinite'
+                  backgroundSize: '200% 100%'
                 }}
               >
                 {/* キラキラエフェクト */}
@@ -152,13 +151,6 @@ export default function FileUpload({ onFileUpload, isLoading, loadingText, progr
               </p>
             </div>
             <p className="text-sm text-gray-500 mt-2">AIが内容を解析して原稿を作成しています...</p>
-            
-            <style jsx>{`
-              @keyframes gradientMove {
-                0% { background-position: 100% 0%; }
-                100% { background-position: 0% 0%; }
-              }
-            `}</style>
           </div>
         ) : (
           <>

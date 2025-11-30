@@ -37,3 +37,16 @@ body {
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+@keyframes gradientMove {
+  0% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.animate-gradient-move {
+  animation: gradientMove 2s linear infinite;
+}
