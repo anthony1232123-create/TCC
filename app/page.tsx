@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import FileUpload from '@/components/FileUpload';
 import ResultDisplay from '@/components/ResultDisplay';
 
@@ -37,6 +38,20 @@ export default function Home() {
         setHistory(JSON.parse(savedHistory));
       } catch (e) {
         console.error('Failed to parse history', e);
+      }
+    }
+    
+    // 履歴詳細ページから戻ってきた場合の処理
+    const pendingItem = localStorage.getItem('currentJobPosting');
+    if (pendingItem) {
+      try {
+        const item = JSON.parse(pendingItem);
+        setGeneratedText(item.generatedText);
+        setStructuredText('');
+        setCurrentPhase(2);
+        localStorage.removeItem('currentJobPosting'); // 使い終わったら削除
+      } catch (e) {
+        console.error('Failed to load pending item', e);
       }
     }
   }, []);
@@ -282,17 +297,25 @@ export default function Home() {
           </div>
         </header>
 
-        {/* 履歴セクション（上部に移動） */}
+        {/* 履歴セクション（上部に移動、最新5件のみ表示） */}
         {history.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              作成履歴
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                作成履歴
+              </h2>
+              <Link href="/history" className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
+                すべての履歴を見る
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {history.map((item) => (
+              {history.slice(0, 5).map((item) => (
                 <div 
                   key={item.id}
                   onClick={() => loadHistoryItem(item)}
