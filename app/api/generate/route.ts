@@ -186,14 +186,19 @@ export async function POST(request: NextRequest) {
             
             // 値セルが全て空欄の場合の処理
             if (!hasValue && itemName) {
-              // 「ここがポイント」の特別処理
+              // 「ここがポイント」の特別処理：テキスト化しない
               if (itemName.includes('ここがポイント')) {
-                processedRows.push('ここがポイントに記載はありませんでした。');
+                // スキップ
+                continue;
               } else {
                 // その他のプルダウン形式の項目
                 processedRows.push(`${itemName} | （記載なし）`);
               }
             } else if (hasValue && cells.length > 0) {
+              // 「ここがポイント」の場合も値があればスキップ（要望によりテキスト化を省く）
+              if (itemName.includes('ここがポイント')) {
+                continue;
+              }
               // 値がある場合は通常通り
               processedRows.push(cells.join(' | '));
             }
