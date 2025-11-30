@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
@@ -9,7 +9,32 @@ interface FileUploadProps {
 
 export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // プログレスバーのアニメーション
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLoading) {
+      setProgress(0);
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          // 95%までゆっくり進む（完了はisLoadingがfalseになったとき）
+          if (prev >= 95) return 95;
+          // 最初は速く、だんだん遅くなるような動き
+          const increment = Math.max(0.5, (95 - prev) / 20);
+          return Math.min(95, prev + increment);
+        });
+      }, 200);
+    } else {
+      setProgress(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading]);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -69,12 +94,12 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
       <div
         className={`
           border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
-          transition-all duration-200
+          transition-all duration-200 relative overflow-hidden
           ${isDragging 
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-300 hover:border-gray-400 bg-gray-50'
           }
-          ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+          ${isLoading ? 'opacity-90 cursor-not-allowed border-blue-200' : ''}
         `}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -92,15 +117,43 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
         />
         
         {isLoading ? (
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-700 font-medium">まずはファイルをテキスト化しています...</p>
-            <p className="text-sm text-gray-500 mt-1">しばらくお待ちください</p>
+          <div className="flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto">
+            {/* おしゃれなプログレスバー (Canva風) */}
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-4 relative shadow-inner">
+              <div 
+                className="h-full rounded-full relative transition-all duration-300 ease-out"
+                style={{ 
+                  width: `${progress}%`,
+                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #8b5cf6 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'gradientMove 2s linear infinite'
+                }}
+              >
+                {/* キラキラエフェクト */}
+                <div className="absolute top-0 left-0 w-full h-full bg-white/30 animate-pulse"></div>
+                <div className="absolute top-0 right-0 h-full w-2 bg-white/50 blur-[2px]"></div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+              <p className="text-gray-700 font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 animate-pulse">
+                まずはファイルをテキスト化しています... {Math.round(progress)}%
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">しばらくお待ちください</p>
+            
+            <style jsx>{`
+              @keyframes gradientMove {
+                0% { background-position: 100% 0%; }
+                100% { background-position: 0% 0%; }
+              }
+            `}</style>
           </div>
         ) : (
           <>
             <svg
-              className="mx-auto h-16 w-16 text-gray-400 mb-4"
+              className="mx-auto h-16 w-16 text-gray-400 mb-4 transition-transform group-hover:scale-110 duration-300"
               stroke="currentColor"
               fill="none"
               viewBox="0 0 48 48"
@@ -126,4 +179,3 @@ export default function FileUpload({ onFileUpload, isLoading }: FileUploadProps)
     </div>
   );
 }
-
