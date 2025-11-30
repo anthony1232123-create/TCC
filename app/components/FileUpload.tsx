@@ -2,7 +2,8 @@
 
 import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 
-export interface FileUploadProps {
+// 型定義をエクスポートせず、コンポーネントの直前で定義する（シンプルな形に戻す）
+interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading: boolean;
   loadingText?: string;
